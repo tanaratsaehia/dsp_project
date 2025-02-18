@@ -1,0 +1,3 @@
+Human Activity Recognition (HAR) using Phone based Accelerometer: https://doi.org/10.1109/IAICT50021.2020.9172037
+    recognition activity like walk, run, using elevator etc.
+    for track and analyze human action
