@@ -7,7 +7,7 @@ Human Activity Recognition (HAR) using Phone based Accelerometer:
 
 
 To Do List
-    1. Define all activity class (walk, run, using elevator)
+    1. Define all activity class (walk, run, using elevator, using stair)
     2. Develop Android APP for collect data
     3. Create Signal process algorithms
         - clean data (remove noise)

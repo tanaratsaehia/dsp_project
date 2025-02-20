@@ -99,7 +99,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         modeSpinner = findViewById(R.id.modeSpinner)
 
         // Setup Spinner with record modes.
-        val modes = listOf("mode_1", "mode_2", "mode_3")
+        val modes = listOf("walk", "run", "using_elevator", "using_stair")
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modes)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         modeSpinner.adapter = adapter
@@ -131,7 +131,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
                 // Create a CSV file with mode and current date/time.
                 val selectedMode = modeSpinner.selectedItem.toString()
-                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+                val timestamp = SimpleDateFormat("dd-MM-yyyy_HH-mm-ss", Locale.getDefault()).format(Date())
                 val fileName = "${selectedMode}_$timestamp.csv"
 
                 // For simplicity, writing file in app's external files directory.

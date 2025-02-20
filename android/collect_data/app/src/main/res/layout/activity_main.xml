@@ -7,23 +7,15 @@
     android:gravity="center_horizontal"
     android:padding="16dp">
 
-    <!-- Record time TextView (displayed at the top center) -->
     <TextView
-        android:id="@+id/recordTimeTextView"
+        android:id="@+id/Title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Record Time: 00:00"
-        android:textSize="20sp"
+        android:text="Digital Signal Processing EiEi"
         android:layout_marginTop="30dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="30dp"
+        android:textSize="24sp"
         android:textColor="@android:color/black" />
-
-    <!-- Dropdown (Spinner) for record mode selection -->
-    <Spinner
-        android:id="@+id/modeSpinner"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp" />
 
     <!-- Your accelerometer chart view -->
     <com.example.humanactivity.AccelerometerChartView
@@ -51,17 +43,36 @@
         android:textColor="@android:color/black"
         android:layout_marginTop="8dp" />
 
+    <!-- Record time TextView (displayed at the top center) -->
+    <TextView
+        android:id="@+id/recordTimeTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Record Time: 00:00"
+        android:textSize="20sp"
+        android:layout_marginTop="130dp"
+        android:layout_marginBottom="16dp"
+        android:textColor="@android:color/black" />
+
+    <!-- Dropdown (Spinner) for record mode selection -->
+    <Spinner
+        android:id="@+id/modeSpinner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp" />
+
     <!-- Spacer to push the record button toward the bottom -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
+<!--    <View-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="0dp"-->
+<!--        android:layout_weight="1" />-->
 
     <!-- Button at bottom center for start/stop recording -->
     <Button
         android:id="@+id/recordButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="60dp"
         android:text="Start Recording" />
 
 </LinearLayout>
