@@ -50,8 +50,16 @@
         android:layout_height="wrap_content"
         android:text="Record Time: 00:00"
         android:textSize="20sp"
-        android:layout_marginTop="130dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginTop="110dp"
+        android:textColor="@android:color/black" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="sample rate 50 Hz"
+        android:textSize="12sp"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"
         android:textColor="@android:color/black" />
 
     <!-- Dropdown (Spinner) for record mode selection -->

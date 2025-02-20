@@ -8,6 +8,7 @@ import android.hardware.SensorManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.util.Log
 import android.view.View
 import android.widget.ArrayAdapter
@@ -27,6 +28,7 @@ import java.util.Locale
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
 
+    private lateinit var wakeLock: PowerManager.WakeLock
     private lateinit var sensorManager: SensorManager
     private var accelerometer: Sensor? = null
     private var gyroscope: Sensor? = null
@@ -89,6 +91,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        // Use PARTIAL_WAKE_LOCK to keep CPU running.
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyApp::SensorWakelock")
 
         // Initialize views.
         chartView = findViewById(R.id.accelerometer_chart)
@@ -162,6 +168,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onResume() {
         super.onResume()
+        wakeLock.acquire()
         accelerometer?.also { sensor ->
             sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME)
         }
@@ -184,6 +191,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 e.printStackTrace()
             }
             isRecording = false
+        }
+        if (wakeLock.isHeld) {
+            wakeLock.release()
         }
     }
 
