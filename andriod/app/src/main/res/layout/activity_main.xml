@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Your accelerometer chart view -->
+    <com.example.humanactivity.AccelerometerChartView
+        android:id="@+id/accelerometer_chart"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:layout_marginTop="16dp" />
+
+    <!-- TextView to display current accelerometer values -->
+    <TextView
+        android:id="@+id/currentValuesTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Current: X=0.00, Y=0.00, Z=0.00"
+        android:textSize="18sp"
+        android:textColor="@android:color/black" />
+
+    <!-- Other UI components can go here -->
+
+</LinearLayout>
