@@ -56,7 +56,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="sample rate 50 Hz"
+        android:text="sampling rate 50 Hz"
         android:textSize="12sp"
         android:layout_marginTop="5dp"
         android:layout_marginBottom="5dp"
