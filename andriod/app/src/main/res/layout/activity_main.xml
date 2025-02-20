@@ -4,24 +4,64 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:gravity="center_horizontal"
     android:padding="16dp">
+
+    <!-- Record time TextView (displayed at the top center) -->
+    <TextView
+        android:id="@+id/recordTimeTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Record Time: 00:00"
+        android:textSize="20sp"
+        android:layout_marginTop="30dp"
+        android:layout_marginBottom="16dp"
+        android:textColor="@android:color/black" />
+
+    <!-- Dropdown (Spinner) for record mode selection -->
+    <Spinner
+        android:id="@+id/modeSpinner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp" />
 
     <!-- Your accelerometer chart view -->
     <com.example.humanactivity.AccelerometerChartView
         android:id="@+id/accelerometer_chart"
         android:layout_width="match_parent"
         android:layout_height="300dp"
-        android:layout_marginTop="16dp" />
+        android:layout_marginBottom="16dp" />
 
     <!-- TextView to display current accelerometer values -->
     <TextView
-        android:id="@+id/currentValuesTextView"
+        android:id="@+id/currentAcceleTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Current: X=0.00, Y=0.00, Z=0.00"
+        android:text="Current Accel: X=0.00, Y=0.00, Z=0.00"
         android:textSize="18sp"
         android:textColor="@android:color/black" />
 
-    <!-- Other UI components can go here -->
+    <!-- TextView to display current gyroscope values -->
+    <TextView
+        android:id="@+id/currentGyroTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Current Gyro: X=0.00, Y=0.00, Z=0.00"
+        android:textSize="18sp"
+        android:textColor="@android:color/black"
+        android:layout_marginTop="8dp" />
+
+    <!-- Spacer to push the record button toward the bottom -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Button at bottom center for start/stop recording -->
+    <Button
+        android:id="@+id/recordButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Start Recording" />
 
 </LinearLayout>

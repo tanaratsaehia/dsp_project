@@ -124,12 +124,12 @@ class AccelerometerChartView @JvmOverloads constructor(
         // Draw axis label text for each line (legend).
         // We'll place them near the top-left corner.
         var legendStartX = leftMargin
-        var legendStartY = 180f
+        var legendStartY = 80f
 
         canvas.drawText("X (Red)", legendStartX, legendStartY, paintX)
         legendStartX += 180f
         canvas.drawText("Y (Green)", legendStartX, legendStartY, paintY)
-        legendStartX += 180f
+        legendStartX += 220f
         canvas.drawText("Z (Blue)", legendStartX, legendStartY, paintZ)
 
         // Display the current accelerometer values in text
