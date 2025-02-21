@@ -145,7 +145,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 try {
                     csvWriter = FileWriter(file)
                     // Write CSV header.
-                    csvWriter?.append("ElapsedTimeMillis,AccelX,AccelY,AccelZ\n")
+                    csvWriter?.append("time,x,y,z\n")
                     Toast.makeText(this, "Recording to file: $fileName", Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
                     e.printStackTrace()
