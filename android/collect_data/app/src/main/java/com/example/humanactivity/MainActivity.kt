@@ -105,7 +105,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         modeSpinner = findViewById(R.id.modeSpinner)
 
         // Setup Spinner with record modes.
-        val modes = listOf("walk", "run", "using_elevator", "using_stair")
+        val modes = listOf("walking", "runing", "climbing_stairs", "descending_stairs", "sitting_standing_transition")
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modes)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         modeSpinner.adapter = adapter
