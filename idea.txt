@@ -13,3 +13,11 @@ To Do List
         - clean data (remove noise)
         - classifier
     4. combine algorithms with android app (deploy)
+
+all thing we doing here for these future works
+    some people need help doing activities of daily living (ADLs) for example, while recovering from surgery.
+    Others might need help for a long time, even for the rest of their lives. 
+    This might happen if you have a chronic condition that affects how well you can move, remember or solve problems.
+
+    1.เพื่อช่วย track acitvity สำหรับผู้ป่วยพักฟื้น ให้ทำกิจกรรมตามที่หมอแนะนำ
+    2.
