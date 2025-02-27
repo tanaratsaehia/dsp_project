@@ -11,11 +11,7 @@ import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
 import android.view.View
-import android.widget.ArrayAdapter
-import android.widget.Button
-import android.widget.Spinner
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -25,6 +21,8 @@ import java.io.FileWriter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.graphics.Color
+import android.graphics.Paint
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
 
@@ -43,6 +41,17 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     // References to UI elements.
     private lateinit var chartView: AccelerometerChartView
+
+    // *** New Buttons for switching modes ***
+    private lateinit var btnPredict: Button
+    private lateinit var btnRecord: Button
+
+    // *** Predict result TextView ***
+    private lateinit var predictResultTextView: TextView
+
+    // *** The layout that contains record widgets ***
+    private lateinit var recordLayout: LinearLayout
+
     private lateinit var currentAcceleTextView: TextView
     private lateinit var currentGyroTextView: TextView
     private lateinit var recordTimeTextView: TextView
@@ -98,6 +107,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         // Initialize views.
         chartView = findViewById(R.id.accelerometer_chart)
+
+        // *** New UI references ***
+        btnPredict = findViewById(R.id.btnPredict)
+        btnRecord = findViewById(R.id.btnRecord)
+        predictResultTextView = findViewById(R.id.predictResultTextView)
+        recordLayout = findViewById(R.id.recordLayout)
+
+        highlightButton(btnPredict, btnRecord)
+
         currentAcceleTextView = findViewById(R.id.currentAcceleTextView)
         currentGyroTextView = findViewById(R.id.currentGyroTextView)
         recordTimeTextView = findViewById(R.id.recordTimeTextView)
@@ -127,7 +145,29 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             Toast.makeText(this, "Gyroscope sensor is not available on this device", Toast.LENGTH_LONG).show()
         }
 
-        // Set up record button click listener.
+        // *** Handle PREDICT button ***
+        btnPredict.setOnClickListener {
+            highlightButton(btnPredict, btnRecord)
+            // Show prediction text, hide record layout
+            predictResultTextView.visibility = View.VISIBLE
+            recordLayout.visibility = View.GONE
+
+            // If you also want to reset the text each time, do:
+            predictResultTextView.text = "predicted result will display here"
+        }
+
+        // *** Handle RECORD button ***
+        btnRecord.setOnClickListener {
+            highlightButton(btnRecord, btnPredict)
+            // Hide prediction text, show record layout
+            predictResultTextView.visibility = View.GONE
+            recordLayout.visibility = View.VISIBLE
+
+            // Optionally clear the prediction text
+            predictResultTextView.text = ""
+        }
+
+        // Set up record button click listener (existing logic).
         recordButton.setOnClickListener {
             if (!isRecording) {
                 // Start recording.
@@ -217,5 +257,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
         // No operation needed.
+    }
+
+    private fun highlightButton(selectedButton: Button, unselectedButton: Button) {
+        // Underline + red text for the selected button
+        selectedButton.paintFlags = selectedButton.paintFlags or Paint.UNDERLINE_TEXT_FLAG
+        selectedButton.setTextColor(Color.RED)
+
+        // Remove underline + black text for the other button
+        unselectedButton.paintFlags = unselectedButton.paintFlags and Paint.UNDERLINE_TEXT_FLAG.inv()
+        unselectedButton.setTextColor(Color.BLACK)
     }
 }
