@@ -20,7 +20,7 @@ class PreprocessAccel:
         Parameters:
             df (pd.DataFrame): DataFrame containing columns 'time', 'x', 'y', 'z'.
                             'time' is in milliseconds.
-            magnitude_column_name (string): Name of calculated magnitude.
+            magnitude_column_name (string): Target column name that already calculate magnitude.
             window_size_sec (float): Length of each window in seconds (default 5).
             overlap (float): Fraction of window overlap (default 0.5 = 50%).
             sampling_rate (int): Sampling rate in Hz (default 50).
@@ -66,38 +66,39 @@ class PreprocessAccel:
         # Convert list of dicts into a DataFrame
         return pd.DataFrame(flattened_rows)
     
-    def compute_fft_on_flattened_data(self, df, num_samples=250):
+    def compute_fft_on_flattened_data(self, df, num_samples=250, remove_flatten=True):
         """
-        For each row (window) in the DataFrame, compute the FFT of the flattened time-series 
-        in columns x1...xN, take the magnitude spectrum, and keep only the first half 
-        (non-redundant part).
+        Compute the FFT of the time-series in columns x1...xN, take the magnitude spectrum, 
+        and keep only the first half (non-redundant part).
         
         The returned DataFrame contains:
         - 'start_time' and 'label'
-        - 'fft1', 'fft2', ... up to fft(M) where M = num_samples//2 + 1
+        - Original data (x1-x250) if remove_flatten=False
+        - FFT features starting from x251 (fft1-fft126)
         """
         feature_columns = [f'x{i+1}' for i in range(num_samples)]
         fft_features_list = []
-        
-        # Loop through each row (each window)
-        for idx, row in df.iterrows():
-            # Extract the time-series for this window and convert to float
+
+        # Loop through each row to compute FFT
+        for _, row in df.iterrows():
             ts = row[feature_columns].values.astype(np.float64)
-            # Compute the FFT
             fft_vals = np.fft.fft(ts)
-            # Compute magnitude (absolute value)
             fft_mag = np.abs(fft_vals)
-            # Keep only the first half (+1 to include DC component)
-            half_fft = fft_mag[:num_samples//2 + 1]
+            half_fft = fft_mag[:num_samples // 2 + 1]  # Keep first half (+1 for DC component)
             fft_features_list.append(half_fft)
-        
-        # Create a DataFrame for FFT features with column names fft1, fft2, ...
-        num_fft_features = num_samples//2 + 1
+
+        # Create FFT feature DataFrame
+        num_fft_features = num_samples // 2 + 1
         fft_df = pd.DataFrame(
             fft_features_list, 
-            columns=[f'x{i+1}' for i in range(num_fft_features)]
+            columns=[f'x{i+1}' for i in range(num_samples+1, num_samples+1+num_fft_features)]
         )
+
+        # Include original data if required
+        if not remove_flatten:
+            combined_df = pd.concat([df[['start_time', 'label'] + feature_columns].reset_index(drop=True), fft_df], axis=1)
+        else:
+            combined_df = pd.concat([df[['start_time', 'label']].reset_index(drop=True), fft_df], axis=1)
+
+        return combined_df
         
-        # Combine the start_time and label with the FFT features
-        result_df = pd.concat([df[['start_time', 'label']].reset_index(drop=True), fft_df], axis=1)
-        return result_df
