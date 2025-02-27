@@ -20,7 +20,7 @@ class PreprocessAccel:
         Parameters:
             df (pd.DataFrame): DataFrame containing columns 'time', 'x', 'y', 'z'.
                             'time' is in milliseconds.
-            magnitude_column_name (string): Name of calculated magnitude.
+            magnitude_column_name (string): Target column name that already calculate magnitude.
             window_size_sec (float): Length of each window in seconds (default 5).
             overlap (float): Fraction of window overlap (default 0.5 = 50%).
             sampling_rate (int): Sampling rate in Hz (default 50).

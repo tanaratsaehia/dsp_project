@@ -50,7 +50,7 @@
         android:layout_height="wrap_content"
         android:text="Record Time: 00:00"
         android:textSize="20sp"
-        android:layout_marginTop="110dp"
+        android:layout_marginTop="10dp"
         android:textColor="@android:color/black" />
 
     <TextView
@@ -80,7 +80,7 @@
         android:id="@+id/recordButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="60dp"
+        android:layout_marginTop="30dp"
         android:text="Start Recording" />
 
 </LinearLayout>
