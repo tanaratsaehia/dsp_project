@@ -23,6 +23,9 @@ import java.util.Date
 import java.util.Locale
 import android.graphics.Color
 import android.graphics.Paint
+import com.example.humanactivity.ml.FftWin5Lab5050epAcc96
+import java.util.Timer
+import java.util.TimerTask
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
 
@@ -30,6 +33,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var sensorManager: SensorManager
     private var accelerometer: Sensor? = null
     private var gyroscope: Sensor? = null
+
+    // Create a TFLite model instance.
+    private lateinit var tfliteModel: FftWin5Lab5050epAcc96
+    // Create DSPProcessor with the model.
+    private lateinit var dspProcessor: DSPProcessor
+    // Create a timer to trigger DSP processing every 2.5 seconds.
+    private val dspTimer = Timer()
 
     // Latest sensor values.
     private var accelX = 0f
@@ -67,31 +77,25 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var recordStartTime: Long = 0L
     private var csvWriter: FileWriter? = null
 
+    private val windowShiftMillis = 2500L
+
     private val sampleRunnable = object : Runnable {
         override fun run() {
             // Update the chart and current sensor values.
             chartView.addData(accelX, accelY, accelZ)
-            val currentAccelValuesText = "Current Accel: X=%.2f, Y=%.2f, Z=%.2f".format(accelX, accelY, accelZ)
-            currentAcceleTextView.text = currentAccelValuesText
+            currentAcceleTextView.text = "Current Accel: X=%.2f, Y=%.2f, Z=%.2f".format(accelX, accelY, accelZ)
+            currentGyroTextView.text = "Current Gyro: X=%.2f, Y=%.2f, Z=%.2f".format(gyroX, gyroY, gyroZ)
 
-            val currentGyroValuesText = "Current Gyro: X=%.2f, Y=%.2f, Z=%.2f".format(gyroX, gyroY, gyroZ)
-            currentGyroTextView.text = currentGyroValuesText
-
-            // If recording is active, update record time and write a CSV line.
+            // If recording, write CSV line.
             if (isRecording) {
                 val elapsedMillis = System.currentTimeMillis() - recordStartTime
-                val seconds = elapsedMillis / 1000
-                recordTimeTextView.text = "Record Time: %02d:%02d".format(seconds / 60, seconds % 60)
-
-                // Prepare CSV line: "elapsed_time,accelX,accelY,accelZ"
+                recordTimeTextView.text = "Record Time: %02d:%02d".format(elapsedMillis / 60000, (elapsedMillis / 1000) % 60)
                 val csvLine = "$elapsedMillis,%.2f,%.2f,%.2f\n".format(accelX, accelY, accelZ)
                 try {
                     csvWriter?.append(csvLine)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                } catch (e: Exception) { e.printStackTrace() }
             }
-
+            // Post next sample update.
             handler.postDelayed(this, sampleInterval)
         }
     }
@@ -148,43 +152,33 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         // *** Handle PREDICT button ***
         btnPredict.setOnClickListener {
             highlightButton(btnPredict, btnRecord)
-            // Show prediction text, hide record layout
+            // Show prediction text, hide record layout.
             predictResultTextView.visibility = View.VISIBLE
             recordLayout.visibility = View.GONE
-
-            // If you also want to reset the text each time, do:
             predictResultTextView.text = "predicted result will display here"
         }
 
         // *** Handle RECORD button ***
         btnRecord.setOnClickListener {
             highlightButton(btnRecord, btnPredict)
-            // Hide prediction text, show record layout
+            // Hide prediction text, show record layout.
             predictResultTextView.visibility = View.GONE
             recordLayout.visibility = View.VISIBLE
-
-            // Optionally clear the prediction text
             predictResultTextView.text = ""
         }
 
-        // Set up record button click listener (existing logic).
+        // Set up record button click listener.
         recordButton.setOnClickListener {
             if (!isRecording) {
-                // Start recording.
                 isRecording = true
                 recordStartTime = System.currentTimeMillis()
                 recordButton.text = "Stop Recording"
-
-                // Create a CSV file with mode and current date/time.
                 val selectedMode = modeSpinner.selectedItem.toString()
                 val timestamp = SimpleDateFormat("dd-MM-yyyy_HH-mm-ss", Locale.getDefault()).format(Date())
                 val fileName = "${selectedMode}_$timestamp.csv"
-
-                // For simplicity, writing file in app's external files directory.
                 val file = File(getExternalFilesDir(null), fileName)
                 try {
                     csvWriter = FileWriter(file)
-                    // Write CSV header.
                     csvWriter?.append("time,x,y,z\n")
                     Toast.makeText(this, "Recording to file: $fileName", Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
@@ -192,7 +186,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     Toast.makeText(this, "Error creating CSV file", Toast.LENGTH_SHORT).show()
                 }
             } else {
-                // Stop recording.
                 isRecording = false
                 recordButton.text = "Start Recording"
                 try {
@@ -204,6 +197,21 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 Toast.makeText(this, "Recording stopped", Toast.LENGTH_SHORT).show()
             }
         }
+
+        // Instantiate the TFLite model once.
+        tfliteModel = FftWin5Lab5050epAcc96.newInstance(this)
+        // Pass the model to DSPProcessor.
+//        dspProcessor = DSPProcessor()
+        dspProcessor = DSPProcessor(this, tfliteModel, samplingRate = 50.0)
+
+        // Start a timer task that triggers DSP processing every windowShiftMillis.
+        dspTimer.scheduleAtFixedRate(object : TimerTask() {
+            override fun run() {
+                runOnUiThread {
+                    dspProcessor.processIfReady(System.currentTimeMillis())
+                }
+            }
+        }, windowShiftMillis, windowShiftMillis)
     }
 
     override fun onResume() {
@@ -222,7 +230,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         super.onPause()
         sensorManager.unregisterListener(this)
         handler.removeCallbacks(sampleRunnable)
-        // Ensure file is closed if activity is paused while recording.
+        dspTimer.cancel()
         if (isRecording) {
             try {
                 csvWriter?.flush()
@@ -237,6 +245,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        // Close the TFLite model when the app is closing.
+        tfliteModel.close()
+    }
+
     override fun onSensorChanged(event: SensorEvent?) {
         event?.let {
             when (it.sensor.type) {
@@ -244,6 +258,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     accelX = it.values[0]
                     accelY = it.values[1]
                     accelZ = it.values[2]
+                    // Feed the sample into DSPProcessor.
+                    dspProcessor.addSample(SensorSample(System.currentTimeMillis(), accelX, accelY, accelZ))
                 }
                 Sensor.TYPE_GYROSCOPE -> {
                     gyroX = it.values[0]
@@ -260,11 +276,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun highlightButton(selectedButton: Button, unselectedButton: Button) {
-        // Underline + red text for the selected button
         selectedButton.paintFlags = selectedButton.paintFlags or Paint.UNDERLINE_TEXT_FLAG
         selectedButton.setTextColor(Color.RED)
-
-        // Remove underline + black text for the other button
         unselectedButton.paintFlags = unselectedButton.paintFlags and Paint.UNDERLINE_TEXT_FLAG.inv()
         unselectedButton.setTextColor(Color.BLACK)
     }
