@@ -39,6 +39,8 @@ android {
 }
 
 dependencies {
+    implementation("be.tarsos.dsp:core:2.5")
+    implementation("be.tarsos.dsp:jvm:2.5")
     implementation(libs.jtransforms)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

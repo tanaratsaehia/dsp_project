@@ -23,7 +23,9 @@ import java.util.Date
 import java.util.Locale
 import android.graphics.Color
 import android.graphics.Paint
+import com.example.humanactivity.ml.AddScaleWin5Lab50Acc95
 import com.example.humanactivity.ml.FftWin5Lab5050epAcc96
+import com.example.humanactivity.ml.Win2Lab50Acc93
 import java.util.Timer
 import java.util.TimerTask
 
@@ -35,11 +37,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var gyroscope: Sensor? = null
 
     // Create a TFLite model instance.
-    private lateinit var tfliteModel: FftWin5Lab5050epAcc96
+    private lateinit var tfliteModel: Win2Lab50Acc93
     // Create DSPProcessor with the model.
     private lateinit var dspProcessor: DSPProcessor
     // Create a timer to trigger DSP processing every 2.5 seconds.
-    private val dspTimer = Timer()
+    private var dspTimer: Timer? = null
 
     // Latest sensor values.
     private var accelX = 0f
@@ -77,7 +79,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var recordStartTime: Long = 0L
     private var csvWriter: FileWriter? = null
 
-    private val windowShiftMillis = 2500L
+    private val windowShiftMillis = 1000L
 
     private val sampleRunnable = object : Runnable {
         override fun run() {
@@ -199,13 +201,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
         // Instantiate the TFLite model once.
-        tfliteModel = FftWin5Lab5050epAcc96.newInstance(this)
+        tfliteModel = Win2Lab50Acc93.newInstance(this)
         // Pass the model to DSPProcessor.
 //        dspProcessor = DSPProcessor()
         dspProcessor = DSPProcessor(this, tfliteModel, samplingRate = 50.0)
 
         // Start a timer task that triggers DSP processing every windowShiftMillis.
-        dspTimer.scheduleAtFixedRate(object : TimerTask() {
+        dspTimer?.scheduleAtFixedRate(object : TimerTask() {
             override fun run() {
                 runOnUiThread {
                     dspProcessor.processIfReady(System.currentTimeMillis())
@@ -224,13 +226,25 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME)
         }
         handler.post(sampleRunnable)
+
+        // Create and schedule the timer task
+        dspTimer = Timer()
+        dspTimer?.scheduleAtFixedRate(object : TimerTask() {
+            override fun run() {
+                runOnUiThread {
+                    dspProcessor.processIfReady(System.currentTimeMillis())
+                }
+            }
+        }, windowShiftMillis, windowShiftMillis)
     }
+
 
     override fun onPause() {
         super.onPause()
         sensorManager.unregisterListener(this)
         handler.removeCallbacks(sampleRunnable)
-        dspTimer.cancel()
+        dspTimer?.cancel()
+        dspTimer = null
         if (isRecording) {
             try {
                 csvWriter?.flush()
@@ -244,6 +258,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             wakeLock.release()
         }
     }
+
 
     override fun onDestroy() {
         super.onDestroy()
