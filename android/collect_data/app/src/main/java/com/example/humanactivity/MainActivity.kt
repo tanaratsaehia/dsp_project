@@ -79,7 +79,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var recordStartTime: Long = 0L
     private var csvWriter: FileWriter? = null
 
-    private val windowShiftMillis = 1000L
+    private val windowShiftMillis = 2500L
 
     private val sampleRunnable = object : Runnable {
         override fun run() {
@@ -199,12 +199,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 Toast.makeText(this, "Recording stopped", Toast.LENGTH_SHORT).show()
             }
         }
-
-        // Instantiate the TFLite model once.
-        tfliteModel = Win2Lab50Acc93.newInstance(this)
         // Pass the model to DSPProcessor.
 //        dspProcessor = DSPProcessor()
-        dspProcessor = DSPProcessor(this, tfliteModel, samplingRate = 50.0)
+        dspProcessor = DSPProcessor(this, samplingRate = 50.0)
 
         // Start a timer task that triggers DSP processing every windowShiftMillis.
         dspTimer?.scheduleAtFixedRate(object : TimerTask() {

@@ -4,11 +4,11 @@ import numpy as np
 from scipy.signal import butter, lfilter
 import joblib
 
-model = joblib.load("rf_model.pkl")
-scaler = joblib.load("scaler.pkl")
-label_encoder = joblib.load("label_encoder.pkl")
+pipeline = joblib.load('activity_recognition_pipeline.pkl')
+model = pipeline['pipeline']
+le = pipeline['label_encoder']
 
-idx2name = {index: label for index, label in enumerate(label_encoder.classes_)}
+idx2name = {index: label for index, label in enumerate(le.classes_)}
 
 class PredictionRequest(BaseModel):
     data: list[float]  # Expecting a single data instance
@@ -20,57 +20,56 @@ async def predict(request: PredictionRequest):
     try:
         # Convert input data to NumPy array
         input_data = np.array(request.data).reshape(1, -1)
-        
-        # Ensure input shape matches expected input shape
-        if input_data.shape[1] != 100:
-            raise HTTPException(status_code=400, detail=f"Invalid input shape. Expected 100 features, got {input_data.shape[1]}")
-        
+
         # Apply bandpass filter
-        input_data = bandpass_filter(input_data)
-        
-        # Compute Fast Fourier Transform
-        input_data = compute_fft(input_data)
-        
-        # Normalize input
-        input_data = scaler.transform(input_data)
-        
+        filtered_magnitude = bandpass_filter(input_data)
+
+        # Compute FFT with fixed length
+        fft_features = compute_fft(filtered_magnitude, expected_length=126)
+        fft_features = np.array(fft_features).reshape(1, -1)
+
         # Predict class probabilities
-        probabilities = model.predict_proba(input_data)[0].tolist()
+        probabilities = model.predict_proba(fft_features)[0].tolist()
+        probabilities = [round(prob, 5) for prob in probabilities]
         predicted_index = np.argmax(probabilities)
         predicted_class = idx2name[predicted_index]
-        
-        return_value = {"predicted_index": int(predicted_index), 
-                        "predicted_class": predicted_class, 
-                        "probabilities": probabilities, 
-                        "names": idx2name,
-                        }
-        return return_value
+
+        return {
+            "predicted_index": int(predicted_index), 
+            "predicted_class": predicted_class, 
+            "probabilities": probabilities, 
+            # "names": idx2name,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/")
 def home():
     return {"message": "MLP Prediction API is running"}
 
-# Bandpass filter function
+# Function to apply band-pass filter
 def bandpass_filter(data, lowcut=0.4, highcut=15, fs=50, order=5):
     nyq = 0.5 * fs
     low = lowcut / nyq
     high = highcut / nyq
     b, a = butter(order, [low, high], btype='band')
-    y = lfilter(b, a, data, axis=1)  # Apply filtering along the correct axis
-    return y
+    return lfilter(b, a, data)
 
-# Compute Fast Fourier Transform
-def compute_fft(data, num_samples=100):
-    fft_features_list = []
-    for row in data:
-        fft_vals = np.fft.fft(row.astype(np.float64))  # Ensure computation uses float64 for precision
-        fft_mag = np.abs(fft_vals)  # Compute magnitude spectrum
-        half_fft = fft_mag[:num_samples // 2 + 1]  # Keep first half (+1 for DC component)
-        fft_features_list.append(half_fft)
+# Function to compute FFT
+def compute_fft(data, expected_length=126):
+    # Ensure data is 1D before applying FFT
+    if data.ndim == 2:
+        data = data.flatten()  # Convert (1, N) to (N,)
     
-    return np.array(fft_features_list)  # Convert final output to float32
+    fft_vals = np.fft.fft(data)
+    fft_mag = np.abs(fft_vals)
+    
+    # Ensure the FFT output length is consistent
+    cut_fft_mag = fft_mag[:expected_length]
+    return cut_fft_mag
+
+
 
 # run this code with:
     # uvicorn main:app --host 0.0.0.0 --port 8000

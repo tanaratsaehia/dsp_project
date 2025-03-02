@@ -4,29 +4,29 @@ import android.app.Activity
 import android.content.Context
 import android.util.Log
 import android.widget.TextView
-import com.example.humanactivity.ml.AddScaleWin5Lab50Acc95
-import com.example.humanactivity.ml.Win2Lab50Acc93
 import kotlin.math.sqrt
-import kotlin.math.abs
-import org.jtransforms.fft.DoubleFFT_1D
-import kotlin.math.ceil
-import kotlin.math.floor
-import kotlin.math.pow
 
-import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
-import org.tensorflow.lite.DataType
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.Response
+import org.json.JSONException
+import org.json.JSONObject
+import java.io.IOException
+
+
 
 // A simple data class to hold a sensor sample.
 data class SensorSample(val timestamp: Long, val x: Float, val y: Float, val z: Float)
 
 class DSPProcessor(
     private val context: Context,
-    private val model: Win2Lab50Acc93,  // Model passed from MainActivity.
     private val samplingRate: Double = 50.0, // nominal sampling rate in Hz
     private val windowSizeMillis: Long = 5000L,  // window length: 5 sec
-    private val windowShiftMillis: Long = 1000L  // new window every 2.5 sec
+    private val windowShiftMillis: Long = 2500L  // new window every 2.5 sec
 ) {
     // Buffer to hold incoming samples.
     private val buffer = mutableListOf<SensorSample>()
@@ -49,13 +49,13 @@ class DSPProcessor(
      */
     fun processIfReady(currentTime: Long) {
         val totalSamples = buffer.size
-        if (totalSamples < 100) {
-            Log.d("DSPProcessor", "Not enough samples: only $totalSamples available. Waiting for 100 samples.")
+        if (totalSamples < 250) {
+            Log.d("DSPProcessor", "Not enough samples: only $totalSamples available. Waiting for 250 samples.")
             return
         }
 
         // Always use the most recent 100 samples.
-        val windowData: List<SensorSample> = buffer.subList(totalSamples - 100, totalSamples)
+        val windowData: List<SensorSample> = buffer.subList(totalSamples - 250, totalSamples)
         processWindow(windowData)
         lastWindowTime = currentTime
     }
@@ -78,124 +78,71 @@ class DSPProcessor(
 
         Log.d("DSPProcessor", "Raw Magnitude (${magnitudes.size}): ${magnitudes.joinToString(", ", limit = 10)} ...")
 
-        // Step 2: Apply band-pass filter.
-        // First high-pass with 0.4 Hz cutoff, then low-pass with 15 Hz cutoff.
-        val bandPassed = bandPassFilterFrequencyDomain(
-            data = magnitudes,
-            fs = samplingRate,
-            lowCutHz = 0.4,
-            highCutHz = 15.0
-        )
-        Log.d("DSPProcessor", "Band-Passed Magnitude (${bandPassed.size}): ${bandPassed.joinToString(limit = 10)} ...")
-
-        // Step 3: Our window is already a flattened vector (of variable length).
-
-        // Step 4: Compute FFT using JTransforms.
-        val fftSize = bandPassed.size
-        val fft = DoubleFFT_1D(fftSize.toLong())
-        // realForward() transforms the array in-place.
-        val fftData = bandPassed.copyOf() // so we don't overwrite 'bandPassed'
-        fft.realForward(fftData)
-
-        // The result is in "packed" format.
-        val halfSize = fftSize / 2 + 1
-        val fftMag = DoubleArray(halfSize)
-
-        // DC component:
-        fftMag[0] = abs(fftData[0])
-
-        // If the data length is even, the last bin is purely real at fftData[1]
-        if (fftSize % 2 == 0) {
-            fftMag[halfSize - 1] = abs(fftData[1])
+        // Convert magnitude data into JSON
+        val jsonData = """
+        {
+            "data": ${magnitudes.joinToString(",", "[", "]")}
         }
+    """.trimIndent()
 
-        val upperBound = if (fftSize % 2 == 0) halfSize - 1 else halfSize
-        for (k in 1 until upperBound) {
-            val re = fftData[2 * k]
-            val im = fftData[2 * k + 1]
-            fftMag[k] = sqrt(re * re + im * im)
-        }
+        // Send HTTP request to FastAPI
+        sendPredictionRequest(jsonData)
+    }
 
-        Log.d("DSPProcessor", "FFT Magnitude Size: ${fftMag.size}, Values: ${fftMag.joinToString(limit = 10)} ...")
+    /**
+     * Sends a POST request to FastAPI to get predictions.
+     */
+    private fun sendPredictionRequest(jsonData: String) {
+        val client = OkHttpClient()
+        val mediaType = "application/json".toMediaType()
+        val body = jsonData.toRequestBody(mediaType)
 
-        // Step 5: Prepare input for TFLite model.
-        val fftMagFloat = FloatArray(fftMag.size) { i -> fftMag[i].toFloat() }
-        val byteBuffer = ByteBuffer.allocateDirect(fftMagFloat.size * 4)
-        byteBuffer.order(ByteOrder.nativeOrder())
-        for (value in fftMagFloat) {
-            byteBuffer.putFloat(value)
-        }
-        byteBuffer.rewind()
+        val request = Request.Builder()
+            .url("http://192.168.110.112:8000/predict")  // Use "10.0.2.2" instead of "localhost" for Android emulator
+            .post(body)
+            .addHeader("Content-Type", "application/json")
+            .build()
 
-        // Create input tensor of shape [1, halfSize]
-        val inputFeature0 = TensorBuffer.createFixedSize(intArrayOf(1, halfSize), DataType.FLOAT32)
-        inputFeature0.loadBuffer(byteBuffer)
-
-        // Run model inference.
-        val outputs = model.process(inputFeature0)
-        val outputFeature0 = outputs.outputFeature0AsTensorBuffer
-
-        // Step 6: Determine predicted class.
-        val outputArray = outputFeature0.floatArray
-        val predictedIndex = outputArray.indices.maxByOrNull { outputArray[it] } ?: -1
-        val classNames = listOf("climbing_stairs", "descending_stairs", "nothing", "running", "sitting_standing", "walking")
-        val predictedClass = if (predictedIndex in classNames.indices) classNames[predictedIndex] else "Unknown"
-
-        Log.d("DSPProcessor", "Predicted activity: $predictedClass (index: $predictedIndex) with probabilities: ${outputArray.joinToString(", ")}")
-
-        // --- Update UI ---
-        // Ensure the UI update is done on the main thread.
-        (context as? Activity)?.runOnUiThread {
-            // Convert 'context' to 'Activity' explicitly
-            val activity = context as Activity
-
-            val resultTextView = activity.findViewById<TextView>(R.id.predictResultTextView)
-            // Build a nicely formatted string for probabilities:
-            val probabilitiesString = outputArray
-                .mapIndexed { index, prob ->
-                    // Format each probability to 2 decimal places
-                    val formattedProb = String.format("%.4f", prob)
-                    "\tClass ${classNames[index]}: $formattedProb"
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("API_ERROR", "Request failed: ${e.message}")
+                (context as? Activity)?.runOnUiThread {
+                    val resultTextView = (context as Activity).findViewById<TextView>(R.id.predictResultTextView)
+                    resultTextView.text = "Error: ${e.message}"
                 }
-                .joinToString("\n")
+            }
 
-            // Combine everything in a multiline string:
-            val displayText = """
+            override fun onResponse(call: Call, response: Response) {
+                val responseData = response.body?.string()
+                Log.d("API_RESPONSE", "Response: $responseData")
+
+                try {
+                    val jsonResponse = JSONObject(responseData)
+                    val predictedClass = jsonResponse.getString("predicted_class")
+                    val probabilities = jsonResponse.getJSONArray("probabilities")
+                    val classNames = listOf("climbing_stairs", "descending_stairs", "nothing", "running", "sitting_standing", "walking")
+
+                    val probabilitiesString = (0 until probabilities.length()).joinToString("\n") { index ->
+                        val formattedProb = String.format("%.4f", probabilities.getDouble(index))
+                        "\t${classNames[index]}: $formattedProb"
+                    }
+
+                    val displayText = """
 Predicted activity: $predictedClass
 
 Probabilities:
 $probabilitiesString
-""".trimIndent()
+                """.trimIndent()
 
-            resultTextView.text = displayText
-        }
+                    (context as? Activity)?.runOnUiThread {
+                        val resultTextView = (context as Activity).findViewById<TextView>(R.id.predictResultTextView)
+                        resultTextView.text = displayText
+                    }
 
-    }
-
-    fun bandPassFilterFrequencyDomain(
-        data: DoubleArray,
-        fs: Double,
-        lowCutHz: Double,
-        highCutHz: Double
-    ): DoubleArray {
-        val n = data.size
-        val fft = DoubleFFT_1D(n.toLong())
-        val fftData = data.copyOf()
-        fft.realForward(fftData)
-        val freqResolution = fs / n
-        val filter = DoubleArray(n) { i ->
-            val freq = i * freqResolution
-            val lowWeight = 1.0 / (1.0 + (lowCutHz / freq).pow(4))
-            val highWeight = 1.0 / (1.0 + (freq / highCutHz).pow(4))
-            lowWeight * highWeight
-        }
-
-        val halfN = n / 2
-        for (k in 0 until halfN) {
-            fftData[2 * k] *= filter[k]
-            fftData[2 * k + 1] *= filter[k]
-        }
-        fft.realInverse(fftData, true)
-        return fftData
+                } catch (e: JSONException) {
+                    Log.e("JSON_ERROR", "Failed to parse JSON: ${e.message}")
+                }
+            }
+        })
     }
 }

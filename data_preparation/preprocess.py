@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from scipy.signal import butter, lfilter
 
 class PreprocessAccel:
     def __init__(self, sampling_rate):
@@ -8,6 +9,26 @@ class PreprocessAccel:
     def calculate_magnitude(self, x, y, z):
         """Return the magnitude from x, y, z components."""
         return np.sqrt(x**2 + y**2 + z**2)
+    
+    # Function to apply band-pass filter
+    def bandpass_filter(self, data, lowcut=0.4, highcut=15, fs=50, order=5):
+        nyq = 0.5 * fs
+        low = lowcut / nyq
+        high = highcut / nyq
+        b, a = butter(order, [low, high], btype='band')
+        return lfilter(b, a, data)
+
+    # Function to compute FFT
+    def compute_fft(self, data):
+        fft_vals = np.fft.fft(data)
+        fft_mag = np.abs(fft_vals)
+        return fft_mag[: len(fft_mag) // 2 + 1]
+
+    # Load and process dataset
+    def load_and_process_dataset(self, df):
+        df['magnitude'] = self.calculate_magnitude(df['x'], df['y'], df['z'])
+        # df['filtered_magnitude'] = self.bandpass_filter(df['magnitude'])
+        return df
 
     def segment_and_flatten_magnitude(self, label, df, magnitude_column_name=None, window_size_sec=5, overlap=0.5):
         """
@@ -36,7 +57,7 @@ class PreprocessAccel:
         
         # 1) Compute magnitude for each row
         if not magnitude_column_name:
-            df['magnitude'] = self.calculate_magnitude(df['x'], df['y'], df['z'])
+            df = self.load_and_process_dataset(df)
 
         # 2) Calculate number of samples per window and step size
         window_samples = int(window_size_sec * self.sampling_rate)  # e.g., 5s * 50Hz = 250
@@ -60,7 +81,6 @@ class PreprocessAccel:
                     row_dict[f'x{i+1}'] = window.loc[i, magnitude_column_name]
                 else:
                     row_dict[f'x{i+1}'] = window.loc[i, 'magnitude']
-            
             flattened_rows.append(row_dict)
 
         # Convert list of dicts into a DataFrame
