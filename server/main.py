@@ -4,7 +4,8 @@ import numpy as np
 from scipy.signal import butter, lfilter
 import joblib
 
-pipeline = joblib.load('activity_recognition_pipeline.pkl')
+pipeline = joblib.load('no_filter_activity_recognition_pipeline.pkl')
+# pipeline = joblib.load('activity_recognition_pipeline.pkl')
 model = pipeline['pipeline']
 le = pipeline['label_encoder']
 
@@ -22,7 +23,8 @@ async def predict(request: PredictionRequest):
         input_data = np.array(request.data).reshape(1, -1)
 
         # Apply bandpass filter
-        filtered_magnitude = bandpass_filter(input_data)
+        filtered_magnitude = input_data
+        # filtered_magnitude = bandpass_filter(input_data)
 
         # Compute FFT with fixed length
         fft_features = compute_fft(filtered_magnitude, expected_length=126)

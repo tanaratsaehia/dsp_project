@@ -27,7 +27,7 @@ class PreprocessAccel:
     # Load and process dataset
     def load_and_process_dataset(self, df):
         df['magnitude'] = self.calculate_magnitude(df['x'], df['y'], df['z'])
-        # df['filtered_magnitude'] = self.bandpass_filter(df['magnitude'])
+        df['filtered_magnitude'] = self.bandpass_filter(df['magnitude'])
         return df
 
     def segment_and_flatten_magnitude(self, label, df, magnitude_column_name=None, window_size_sec=5, overlap=0.5):
@@ -80,7 +80,7 @@ class PreprocessAccel:
                 if magnitude_column_name:
                     row_dict[f'x{i+1}'] = window.loc[i, magnitude_column_name]
                 else:
-                    row_dict[f'x{i+1}'] = window.loc[i, 'magnitude']
+                    row_dict[f'x{i+1}'] = window.loc[i, 'filtered_magnitude']
             flattened_rows.append(row_dict)
 
         # Convert list of dicts into a DataFrame
@@ -121,4 +121,3 @@ class PreprocessAccel:
             combined_df = pd.concat([df[['start_time', 'label']].reset_index(drop=True), fft_df], axis=1)
 
         return combined_df
-        
