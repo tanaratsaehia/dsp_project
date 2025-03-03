@@ -5,4 +5,4 @@ Create ENV using conda this project base on python 3.10
     conda activate final_project_dsp
 
 Install requirement library
-    pip install -r requirement.txt
+    pip install -r requirements.txt
