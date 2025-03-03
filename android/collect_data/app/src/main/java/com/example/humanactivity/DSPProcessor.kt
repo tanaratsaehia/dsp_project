@@ -118,7 +118,8 @@ class DSPProcessor(
 
                 try {
                     val jsonResponse = JSONObject(responseData)
-                    val predictedClass = jsonResponse.getString("predicted_class")
+//                    val predictedClass = jsonResponse.getString("predicted_class")
+                    val predictedClassIdx = jsonResponse.getInt("predicted_index")
                     val probabilities = jsonResponse.getJSONArray("probabilities")
                     val classNames = listOf("climbing_stairs", "descending_stairs", "nothing", "running", "sitting_standing", "walking")
 
@@ -128,11 +129,11 @@ class DSPProcessor(
                     }
 
                     val displayText = """
-Predicted activity: $predictedClass
+Predicted activity: ${classNames[predictedClassIdx]}
 
 Probabilities:
 $probabilitiesString
-                """.trimIndent()
+                """
 
                     (context as? Activity)?.runOnUiThread {
                         val resultTextView = (context as Activity).findViewById<TextView>(R.id.predictResultTextView)
