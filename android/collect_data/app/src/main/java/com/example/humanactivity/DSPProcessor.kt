@@ -98,7 +98,7 @@ class DSPProcessor(
         val body = jsonData.toRequestBody(mediaType)
 
         val request = Request.Builder()
-            .url("http://192.168.110.112:8000/predict")  // Use "10.0.2.2" instead of "localhost" for Android emulator
+            .url("http://192.168.156.237:8000/predict")  // Use "10.0.2.2" instead of "localhost" for Android emulator
             .post(body)
             .addHeader("Content-Type", "application/json")
             .build()
